@@ -53,6 +53,8 @@ interface PayslipData {
   netPayWords: string
   month: string
   year: string
+  clientName: string
+  clientAddress: string
 }
 
 export default function PayslipPage() {
@@ -63,7 +65,6 @@ export default function PayslipPage() {
   const [payslipData, setPayslipData] = useState<PayslipData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [clientName, setClientName] = useState("ADJ Utility Apps Private Limited")
 
   useEffect(() => {
     if (!employeeId || !month) {
@@ -215,57 +216,57 @@ export default function PayslipPage() {
             <div className="text-center mb-4 sm:mb-6">
               <h1 className="text-lg sm:text-2xl font-bold text-primary">Newchecks Solutions Pvt. Ltd</h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              #428, 2nd floor 8th block Koramangala, Bangalore, Karnataka- 560095.
+                {payslipData.clientAddress || "#428, 2nd floor 8th block Koramangala, Bangalore, Karnataka- 560095."}
               </p>
             </div>
 
             <div className="bg-primary/10 py-2 px-4 rounded-md flex flex-col sm:flex-row justify-between items-center mb-4 sm:mb-6">
               <h2 className="text-sm sm:text-lg font-semibold">Payslip for the month: {displayMonth}</h2>
-              <p className="text-xs sm:text-sm">Client Name: {clientName}</p>
+              <p className="text-xs sm:text-sm">Client Name: {payslipData.clientName}</p>
             </div>
 
             {/* Employee Details */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 sm:mb-6 text-xs sm:text-sm border border-gray-200 rounded-lg p-3">
-  {/* Column 1 */}
-  <div className="flex flex-col space-y-2 border-r border-gray-200 pr-4">
-    <div className="flex justify-between">
-      <span className="font-medium">Emp. Code</span>
-      <span>{payslipData.employeeId}</span>
-    </div>
-    <div className="flex justify-between">
-      <span className="font-medium">Joining Date</span>
-      <span>{payslipData.doj}</span>
-    </div>
-    <div className="flex justify-between">
-      <span className="font-medium">ESIC No</span>
-      <span>{payslipData.esicNo || "--"}</span>
-    </div>
-  </div>
+              {/* Column 1 */}
+              <div className="flex flex-col space-y-2 border-r border-gray-200 pr-4">
+                <div className="flex justify-between">
+                  <span className="font-medium">Emp. Code</span>
+                  <span>{payslipData.employeeId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Joining Date</span>
+                  <span>{payslipData.doj}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">ESIC No</span>
+                  <span>{payslipData.esicNo || "--"}</span>
+                </div>
+              </div>
 
-  {/* Column 2 */}
-  <div className="flex flex-col space-y-2 border-r border-gray-200 pr-4">
-    <div className="flex justify-between">
-      <span className="font-medium">Emp. Name</span>
-      <span>{payslipData.employeeName}</span>
-    </div>
-    <div className="flex justify-between">
-      <span className="font-medium">Location</span>
-      <span>Bangalore</span>
-    </div>
-    <div className="flex justify-between">
-      <span className="font-medium">UAN No</span>
-      <span>{payslipData.uanNo}</span>
-    </div>
-  </div>
+              {/* Column 2 */}
+              <div className="flex flex-col space-y-2 border-r border-gray-200 pr-4">
+                <div className="flex justify-between">
+                  <span className="font-medium">Emp. Name</span>
+                  <span>{payslipData.employeeName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Location</span>
+                  <span>Bangalore</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">UAN No</span>
+                  <span>{payslipData.uanNo}</span>
+                </div>
+              </div>
 
-  {/* Column 3 */}
-  <div className="flex flex-col space-y-2">
-    <div className="flex justify-between">
-      <span className="font-medium">Designation</span>
-      <span>{payslipData.designation}</span>
-    </div>
-  </div>
-</div>
+              {/* Column 3 */}
+              <div className="flex flex-col space-y-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Designation</span>
+                  <span>{payslipData.designation}</span>
+                </div>
+              </div>
+            </div>
             {/* Bank Details */}
             <div className="mb-4 sm:mb-6 text-xs sm:text-sm border border-gray-200 rounded-lg p-3">
               <div className="flex flex-col space-y-2">
@@ -300,98 +301,89 @@ export default function PayslipPage() {
 
             {/* Earnings and Deductions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 sm:mb-6">
-  {/* Earnings */}
-  <div className="border rounded-md overflow-hidden">
-    <div className="bg-primary/10 py-2 px-4 font-semibold text-center text-xs sm:text-sm">Earnings</div>
-    <div className="p-2 overflow-x-auto">
-      <table className="w-full text-xs sm:text-sm">
-        <thead>
-          <tr className="border-b">
-            <th className="text-left py-1 font-medium">Header</th>
-            <th className="text-right py-1 font-medium">Actual</th>
-            <th className="text-right py-1 font-medium">Salary</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="border-b">
-            <td className="py-1.5">Basic</td>
-            <td className="text-right py-1.5">₹{payslipData.basic}</td>
-            <td className="text-right py-1.5">₹{payslipData.basic}</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-1.5">HRA</td>
-            <td className="text-right py-1.5">₹{payslipData.hra}</td>
-            <td className="text-right py-1.5">₹{payslipData.hra}</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-1.5">Bonus Gross</td>
-            <td className="text-right py-1.5">₹{payslipData.statutoryBonus}</td>
-            <td className="text-right py-1.5">₹{payslipData.statutoryBonus}</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-1.5">Lunch/Food Allowance</td>
-            <td className="text-right py-1.5">₹{payslipData.specialAllowance}</td>
-            <td className="text-right py-1.5">₹{payslipData.specialAllowance}</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-1.5">Attendance Allowance</td>
-            <td className="text-right py-1.5">₹{payslipData.attendanceIncentive}</td>
-            <td className="text-right py-1.5">₹{payslipData.attendanceIncentive}</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-1.5">Over Time</td>
-            <td className="text-right py-1.5">₹0.00</td>
-            <td className="text-right py-1.5">₹{payslipData.otAmount}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+              {/* Earnings */}
+              <div className="border rounded-md overflow-hidden">
+                <div className="bg-primary/10 py-2 px-4 font-semibold text-center text-xs sm:text-sm">Earnings</div>
+                <div className="p-2 overflow-x-auto">
+                  <table className="w-full text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-1 font-medium">Header</th>
+                        <th className="text-right py-1 font-medium">Actual</th>
+                        <th className="text-right py-1 font-medium">Salary</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b">
+                        <td className="py-1.5">Basic</td>
+                        <td className="text-right py-1.5">₹{payslipData.basic}</td>
+                        <td className="text-right py-1.5">₹{payslipData.basic}</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-1.5">HRA</td>
+                        <td className="text-right py-1.5">₹{payslipData.hra}</td>
+                        <td className="text-right py-1.5">₹{payslipData.hra}</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-1.5">Bonus Gross</td>
+                        <td className="text-right py-1.5">₹{payslipData.statutoryBonus}</td>
+                        <td className="text-right py-1.5">₹{payslipData.statutoryBonus}</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-1.5">Lunch/Food Allowance</td>
+                        <td className="text-right py-1.5">₹{payslipData.specialAllowance}</td>
+                        <td className="text-right py-1.5">₹{payslipData.specialAllowance}</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-1.5">Attendance Allowance</td>
+                        <td className="text-right py-1.5">₹{payslipData.attendanceIncentive}</td>
+                        <td className="text-right py-1.5">₹{payslipData.attendanceIncentive}</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-1.5">Over Time</td>
+                        <td className="text-right py-1.5">₹0.00</td>
+                        <td className="text-right py-1.5">₹{payslipData.otAmount}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
-  {/* Deductions */}
-  <div className="border rounded-md overflow-hidden">
-    <div className="bg-primary/10 py-2 px-4 font-semibold text-center text-xs sm:text-sm">Deductions</div>
-    <div className="p-2 overflow-x-auto">
-      <table className="w-full text-xs sm:text-sm">
-        <thead>
-          <tr className="border-b">
-            <th className="text-left py-1 font-medium">Header</th>
-            <th className="text-right py-1 font-medium">Deducted</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="border-b">
-            <td className="py-1.5">PF Employee</td>
-            <td className="text-right py-1.5">₹{payslipData.pfAmount}</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-1.5">Professional Tax</td>
-            <td className="text-right py-1.5">₹{payslipData.professionTax}</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-1.5">Additional Mediclaim Premium</td>
-            <td className="text-right py-1.5">₹{payslipData.karmaLife}</td>
-          </tr>
-          {payslipData.esic !== "0" && (
-            <tr className="border-b">
-              <td className="py-1.5">ESIC</td>
-              <td className="text-right py-1.5">₹{payslipData.esic}</td>
-            </tr>
-          )}
-          {/* Add empty rows to match height with earnings table */}
-          <tr className="border-b">
-            <td className="py-1.5"></td>
-            <td className="text-right py-1.5"></td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-1.5"></td>
-            <td className="text-right py-1.5"></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
+              {/* Deductions */}
+              <div className="border rounded-md overflow-hidden">
+                <div className="bg-primary/10 py-2 px-4 font-semibold text-center text-xs sm:text-sm">Deductions</div>
+                <div className="p-2 overflow-x-auto">
+                  <table className="w-full text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-1 font-medium">Header</th>
+                        <th className="text-right py-1 font-medium">Deducted</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b">
+                        <td className="py-1.5">PF Employee</td>
+                        <td className="text-right py-1.5">₹{payslipData.pfAmount}</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-1.5">Professional Tax</td>
+                        <td className="text-right py-1.5">₹{payslipData.professionTax}</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-1.5">Additional Mediclaim Premium</td>
+                        <td className="text-right py-1.5">₹{payslipData.karmaLife}</td>
+                      </tr>
+                      {payslipData.esic !== "0" && (
+                        <tr>
+                          <td className="py-1.5">ESIC</td>
+                          <td className="text-right py-1.5">₹{payslipData.esic}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
 
             {/* Total Earning, Deduction, and Net Pay */}
             <div className="bg-gray-100 p-3 rounded-lg text-xs sm:text-sm mb-4 sm:mb-6">
@@ -427,3 +419,4 @@ export default function PayslipPage() {
     </div>
   )
 }
+

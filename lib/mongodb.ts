@@ -20,6 +20,27 @@ export async function connectToDatabase() {
   }
 }
 
+// Client Schema
+const ClientSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+  },
+  address: String,
+  contactPerson: String,
+  email: String,
+  phone: String,
+  isDefault: {
+    type: Boolean,
+    default: false,
+  },
+  // Timestamps
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+})
+
 // Employee Schema
 const EmployeeSchema = new mongoose.Schema({
   employeeId: {
@@ -46,6 +67,10 @@ const EmployeeSchema = new mongoose.Schema({
   otHrs: String,
   arrearsDays: String,
   lop: String,
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Client",
+  },
 
   // Timestamps
   createdAt: { type: Date, default: Date.now },
@@ -68,6 +93,10 @@ const PayslipSchema = new mongoose.Schema({
     type: String,
     required: true,
     index: true,
+  },
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Client",
   },
 
   // Earnings
@@ -105,6 +134,7 @@ const PayslipSchema = new mongoose.Schema({
 PayslipSchema.index({ employeeId: 1, month: 1, year: 1 }, { unique: true })
 
 // Define models
+export const Client = mongoose.models.Client || mongoose.model("Client", ClientSchema)
 export const Employee = mongoose.models.Employee || mongoose.model("Employee", EmployeeSchema)
 export const Payslip = mongoose.models.Payslip || mongoose.model("Payslip", PayslipSchema)
 
@@ -160,5 +190,29 @@ export async function getPayslipsByMonth(month: string, year: string, page = 1, 
 
 export async function getPayslipsByEmployee(employeeId: string, page = 1, limit = 10) {
   return getAllPayslips(page, limit, { employeeId })
+}
+
+export async function getAllClients(page = 1, limit = 10, search = "") {
+  await connectToDatabase()
+
+  const query = search
+    ? {
+        name: { $regex: search, $options: "i" },
+      }
+    : {}
+
+  const total = await Client.countDocuments(query)
+  const clients = await Client.find(query)
+    .sort({ name: 1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+
+  return { clients, total, totalPages: Math.ceil(total / limit) }
+}
+
+export async function getDefaultClient() {
+  await connectToDatabase()
+  const defaultClient = await Client.findOne({ isDefault: true })
+  return defaultClient || (await Client.findOne({}))
 }
 

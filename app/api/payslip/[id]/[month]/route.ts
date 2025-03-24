@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { connectToDatabase, Employee, Payslip } from "@/lib/mongodb"
+import { connectToDatabase, Employee, Payslip, Client } from "@/lib/mongodb"
 
 export async function GET(request: NextRequest, { params }: { params: { id: string; month: string } }) {
   try {
@@ -36,7 +36,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, error: "Payslip not found for the selected month" }, { status: 404 })
     }
 
-    // Combine employee and payslip data
+    // Get client data
+    let client = null
+    if (payslip.clientId) {
+      client = await Client.findById(payslip.clientId)
+    }
+
+    if (!client) {
+      // If no client is associated or client not found, get default client
+      client = (await Client.findOne({ isDefault: true })) || (await Client.findOne({}))
+    }
+
+    // Combine employee, payslip, and client data
     const payslipData = {
       // Employee details
       employeeId: employee.employeeId,
@@ -90,6 +101,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       // Month and year
       month: payslip.month,
       year: payslip.year,
+
+      // Client details
+      clientName: client ? client.name : "ADJ Utility Apps Private Limited",
+      clientAddress: client ? client.address : "",
     }
 
     return NextResponse.json({
