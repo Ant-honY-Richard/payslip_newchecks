@@ -1,6 +1,6 @@
 import mongoose from "mongoose"
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/payslip-system"
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://mongo:COnipcVRXptSvCXZeCPekoBhuJvHZWYF@maglev.proxy.rlwy.net:11513"
 
 // Global variable to track connection status
 let isConnected = false

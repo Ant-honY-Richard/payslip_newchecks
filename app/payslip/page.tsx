@@ -213,9 +213,9 @@ export default function PayslipPage() {
           {/* Content */}
           <div className="relative z-10 p-4 sm:p-6 h-400% flex flex-col">
             <div className="text-center mb-4 sm:mb-6">
-              <h1 className="text-lg sm:text-2xl font-bold text-primary">Hands On Management Services Pvt. Ltd</h1>
+              <h1 className="text-lg sm:text-2xl font-bold text-primary">Newchecks Solutions Pvt. Ltd</h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                104 & 902, Technocity IT Premises, Opp MBP Park, MIDC, Mahape, Navi Mumbai- 400 701.
+              #428, 2nd floor 8th block Koramangala, Bangalore, Karnataka- 560095.
               </p>
             </div>
 
@@ -226,44 +226,46 @@ export default function PayslipPage() {
 
             {/* Employee Details */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 sm:mb-6 text-xs sm:text-sm border border-gray-200 rounded-lg p-3">
-              <div className="flex flex-col space-y-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">Emp. Code</span>
-                  <span>{payslipData.employeeId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Joining Date</span>
-                  <span>{payslipData.doj}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">ESIC No</span>
-                  <span>{payslipData.esicNo || "--"}</span>
-                </div>
-              </div>
+  {/* Column 1 */}
+  <div className="flex flex-col space-y-2 border-r border-gray-200 pr-4">
+    <div className="flex justify-between">
+      <span className="font-medium">Emp. Code</span>
+      <span>{payslipData.employeeId}</span>
+    </div>
+    <div className="flex justify-between">
+      <span className="font-medium">Joining Date</span>
+      <span>{payslipData.doj}</span>
+    </div>
+    <div className="flex justify-between">
+      <span className="font-medium">ESIC No</span>
+      <span>{payslipData.esicNo || "--"}</span>
+    </div>
+  </div>
 
-              <div className="flex flex-col space-y-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">Emp. Name</span>
-                  <span>{payslipData.employeeName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Location</span>
-                  <span>Bangalore</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">UAN No</span>
-                  <span>{payslipData.uanNo}</span>
-                </div>
-              </div>
+  {/* Column 2 */}
+  <div className="flex flex-col space-y-2 border-r border-gray-200 pr-4">
+    <div className="flex justify-between">
+      <span className="font-medium">Emp. Name</span>
+      <span>{payslipData.employeeName}</span>
+    </div>
+    <div className="flex justify-between">
+      <span className="font-medium">Location</span>
+      <span>Bangalore</span>
+    </div>
+    <div className="flex justify-between">
+      <span className="font-medium">UAN No</span>
+      <span>{payslipData.uanNo}</span>
+    </div>
+  </div>
 
-              <div className="flex flex-col space-y-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">Designation</span>
-                  <span>{payslipData.designation}</span>
-                </div>
-              </div>
-            </div>
-
+  {/* Column 3 */}
+  <div className="flex flex-col space-y-2">
+    <div className="flex justify-between">
+      <span className="font-medium">Designation</span>
+      <span>{payslipData.designation}</span>
+    </div>
+  </div>
+</div>
             {/* Bank Details */}
             <div className="mb-4 sm:mb-6 text-xs sm:text-sm border border-gray-200 rounded-lg p-3">
               <div className="flex flex-col space-y-2">
