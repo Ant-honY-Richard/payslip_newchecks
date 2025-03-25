@@ -125,7 +125,6 @@ export default function AdminPage() {
   const [newClientIsDefault, setNewClientIsDefault] = useState(false)
   const [isAddingClient, setIsAddingClient] = useState(false)
 
-  // Delete states
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
   const [selectedPayslips, setSelectedPayslips] = useState<{ employeeId: string; month: string; year: string }[]>([])
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -238,7 +237,14 @@ export default function AdminPage() {
   const fetchClients = async (page = 1, search = "") => {
     try {
       setIsLoading(true)
+      console.log("Fetching clients...")
       const response = await fetch(`/api/clients?page=${page}&limit=10&search=${search}`)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`API returned ${response.status}: ${errorText}`)
+      }
+
       const data = await response.json()
 
       if (data.success) {
@@ -268,8 +274,23 @@ export default function AdminPage() {
       console.error("Error fetching clients:", error)
       setStatus({
         type: "error",
-        message: "Failed to fetch clients. Please try again.",
+        message: error instanceof Error ? error.message : "Failed to fetch clients. Please try again.",
       })
+
+      // Create a default client in the UI if we can't fetch from the server
+      if (clients.length === 0) {
+        setClients([
+          {
+            _id: "default",
+            name: "ADJ Utility Apps Private Limited",
+            address: "#428, 2nd floor 8th block Koramangala, Bangalore, Karnataka- 560095",
+            isDefault: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ])
+        setSelectedClient("default")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -295,7 +316,8 @@ export default function AdminPage() {
     }
   }
 
-  const processExcelFile = async () => {
+  // Add this function to the AdminPage component
+  const processBatchedExcelFile = async () => {
     if (!file) {
       setStatus({
         type: "error",
@@ -394,30 +416,62 @@ export default function AdminPage() {
       // Extract month and year from selectedMonth (format: YYYY-MM)
       const [year, month] = selectedMonth.split("-")
 
-      // Save to MongoDB via API
-      const response = await fetch("/api/payslips/bulk", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          payslips: processedData,
-          month,
-          year,
-          clientId: selectedClient,
-        }),
+      // Process in batches of 50 to avoid timeouts
+      const batchSize = 50
+      let processedCount = 0
+      let successCount = 0
+      let failedCount = 0
+
+      // Update status to show batch processing
+      setStatus({
+        type: "info",
+        message: `Processing ${processedData.length} records in batches of ${batchSize}...`,
       })
 
-      const result = await response.json()
+      for (let i = 0; i < processedData.length; i += batchSize) {
+        const batch = processedData.slice(i, i + batchSize)
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to save data to database")
+        // Update status for each batch
+        setStatus({
+          type: "info",
+          message: `Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(processedData.length / batchSize)}...`,
+        })
+
+        try {
+          // Save batch to MongoDB via API
+          const response = await fetch("/api/payslips/bulk", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              payslips: batch,
+              month,
+              year,
+              clientId: selectedClient,
+            }),
+          })
+
+          const result = await response.json()
+
+          if (!response.ok || !result.success) {
+            throw new Error(result.error || "Failed to save batch to database")
+          }
+
+          // Update counts
+          processedCount += result.processedCount || batch.length
+          successCount += result.results.filter((r: any) => r.success).length
+          failedCount += result.results.filter((r: any) => !r.success).length
+        } catch (error) {
+          console.error(`Error processing batch ${Math.floor(i / batchSize) + 1}:`, error)
+          failedCount += batch.length
+        }
       }
 
       // Success message
       setStatus({
         type: "success",
-        message: `Successfully processed ${processedData.length} employee records for ${selectedMonth}. ${result.message}`,
+        message: `Successfully processed ${successCount} of ${processedData.length} employee records for ${selectedMonth}. ${failedCount} records failed.`,
       })
     } catch (error) {
       console.error("Error processing Excel file:", error)
@@ -799,8 +853,9 @@ export default function AdminPage() {
                   )}
                 </div>
 
+                {/* Replace the processExcelFile function call in the Button onClick with this: */}
                 <Button
-                  onClick={processExcelFile}
+                  onClick={processBatchedExcelFile}
                   disabled={!file || !selectedMonth || !selectedClient || isProcessing}
                   className="w-full text-xs sm:text-sm"
                 >
@@ -976,7 +1031,7 @@ export default function AdminPage() {
                                   />
                                 </TableCell>
                                 <TableCell className="font-medium text-xs">{employee.employeeId}</TableCell>
-                                <TableCell className="text-xs">{employee.employeeName}</TableCell>
+                                <TableCell className="text-xs">{employee.name || employee.employeeName}</TableCell>
                                 <TableCell className="text-xs">{employee.mobileNumber}</TableCell>
                                 <TableCell className="text-xs">{employee.department}</TableCell>
                                 <TableCell className="text-xs">{employee.designation}</TableCell>

@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase, Employee, Payslip } from "@/lib/mongodb"
 
+export const maxDuration = 9 // Set max duration to 9 seconds
+
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase()
@@ -16,14 +18,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Month and year are required" }, { status: 400 })
     }
 
+    // Limit the number of payslips to process to avoid timeouts
+    const payslipsToProcess = payslips.slice(0, 50)
+
     // Process each payslip
     const results = await Promise.all(
-      payslips.map(async (payslipData: any) => {
+      payslipsToProcess.map(async (payslipData: any) => {
         try {
           // First, ensure the employee exists
           const employeeData = {
             employeeId: payslipData.employeeId,
-            employeeName: payslipData.employeeName,
+            name: payslipData.employeeName, // Use 'name' to match the Employee schema
             mobileNumber: payslipData.mobileNumber || "",
             dob: payslipData.dob || "",
             doj: payslipData.doj || "",
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest) {
           await Employee.findOneAndUpdate({ employeeId: payslipData.employeeId }, employeeData, {
             upsert: true,
             new: true,
-          })
+          }).exec()
 
           // Now handle the payslip
           const payslipRecord = {
@@ -86,7 +91,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Update or create payslip
-          const result = await Payslip.findOneAndUpdate(
+          await Payslip.findOneAndUpdate(
             {
               employeeId: payslipData.employeeId,
               month,
@@ -94,7 +99,7 @@ export async function POST(request: NextRequest) {
             },
             payslipRecord,
             { upsert: true, new: true },
-          )
+          ).exec()
 
           return {
             employeeId: payslipData.employeeId,
@@ -114,15 +119,24 @@ export async function POST(request: NextRequest) {
 
     const successful = results.filter((r) => r.success).length
     const failed = results.filter((r) => !r.success).length
+    const remaining = payslips.length - payslipsToProcess.length
 
     return NextResponse.json({
       success: true,
-      message: `Processed ${successful} payslips successfully. ${failed} failed.`,
+      message: `Processed ${successful} payslips successfully. ${failed} failed. ${remaining > 0 ? `${remaining} payslips were not processed due to time constraints. Please upload them in smaller batches.` : ""}`,
       results,
+      processedCount: payslipsToProcess.length,
+      totalCount: payslips.length,
     })
   } catch (error) {
     console.error("Error processing bulk payslips:", error)
-    return NextResponse.json({ success: false, error: "Failed to process bulk payslips" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Failed to process bulk payslips: ${error instanceof Error ? error.message : String(error)}`,
+      },
+      { status: 500 },
+    )
   }
 }
 

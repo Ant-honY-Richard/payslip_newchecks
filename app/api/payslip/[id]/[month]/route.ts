@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase, Employee, Payslip, Client } from "@/lib/mongodb"
 
+export const maxDuration = 9 // Set max duration to 9 seconds
+
 export async function GET(request: NextRequest, { params }: { params: { id: string; month: string } }) {
   try {
     await connectToDatabase()
@@ -18,40 +20,42 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, error: "Invalid month format. Expected YYYY-MM" }, { status: 400 })
     }
 
-    // Get employee data
-    const employee = await Employee.findOne({ employeeId: id })
+    // Get employee data - use lean() for better performance
+    const employee = await Employee.findOne({ employeeId: id }).lean().exec()
 
     if (!employee) {
       return NextResponse.json({ success: false, error: "Employee not found" }, { status: 404 })
     }
 
-    // Get payslip data
+    // Get payslip data - use lean() for better performance
     const payslip = await Payslip.findOne({
       employeeId: id,
       month: monthNum,
       year,
     })
+      .lean()
+      .exec()
 
     if (!payslip) {
       return NextResponse.json({ success: false, error: "Payslip not found for the selected month" }, { status: 404 })
     }
 
-    // Get client data
+    // Get client data - use lean() for better performance
     let client = null
     if (payslip.clientId) {
-      client = await Client.findById(payslip.clientId)
+      client = await Client.findById(payslip.clientId).lean().exec()
     }
 
     if (!client) {
       // If no client is associated or client not found, get default client
-      client = (await Client.findOne({ isDefault: true })) || (await Client.findOne({}))
+      client = (await Client.findOne({ isDefault: true }).lean().exec()) || (await Client.findOne({}).lean().exec())
     }
 
     // Combine employee, payslip, and client data
     const payslipData = {
       // Employee details
       employeeId: employee.employeeId,
-      employeeName: employee.employeeName,
+      employeeName: employee.name || employee.employeeName, // Support both field names
       mobileNumber: employee.mobileNumber,
       dob: employee.dob,
       doj: employee.doj,
@@ -113,7 +117,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     })
   } catch (error) {
     console.error("Error fetching payslip:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch payslip" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Failed to fetch payslip: ${error instanceof Error ? error.message : String(error)}`,
+      },
+      { status: 500 },
+    )
   }
 }
 

@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase, Employee, getAllEmployees } from "@/lib/mongodb"
 
+export const maxDuration = 9 // Set max duration to 9 seconds
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -8,7 +10,9 @@ export async function GET(request: NextRequest) {
     const limit = Number.parseInt(searchParams.get("limit") || "10")
     const search = searchParams.get("search") || ""
 
-    const { employees, total, totalPages } = await getAllEmployees(page, limit, search)
+    // Use a smaller limit to ensure we don't timeout
+    const actualLimit = Math.min(limit, 20)
+    const { employees, total, totalPages } = await getAllEmployees(page, actualLimit, search)
 
     return NextResponse.json({
       success: true,
@@ -17,12 +21,18 @@ export async function GET(request: NextRequest) {
         total,
         totalPages,
         currentPage: page,
-        limit,
+        limit: actualLimit,
       },
     })
   } catch (error) {
     console.error("Error fetching employees:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch employees" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Failed to fetch employees: ${error instanceof Error ? error.message : String(error)}`,
+      },
+      { status: 500 },
+    )
   }
 }
 
@@ -33,7 +43,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Check if employee already exists
-    const existingEmployee = await Employee.findOne({ employeeId: body.employeeId })
+    const existingEmployee = await Employee.findOne({ employeeId: body.employeeId }).lean()
 
     if (existingEmployee) {
       // Update existing employee
@@ -41,7 +51,7 @@ export async function POST(request: NextRequest) {
         { employeeId: body.employeeId },
         { ...body, updatedAt: new Date() },
         { new: true },
-      )
+      ).lean()
 
       return NextResponse.json({
         success: true,

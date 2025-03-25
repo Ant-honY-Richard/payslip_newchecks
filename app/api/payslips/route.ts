@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase, Payslip, getAllPayslips, getPayslipsByMonth } from "@/lib/mongodb"
 
+export const maxDuration = 9 // Set max duration to 9 seconds
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -10,15 +12,18 @@ export async function GET(request: NextRequest) {
     const year = searchParams.get("year")
     const employeeId = searchParams.get("employeeId")
 
+    // Use a smaller limit to ensure we don't timeout
+    const actualLimit = Math.min(limit, 20)
+
     let result
 
     if (month && year) {
-      result = await getPayslipsByMonth(month, year, page, limit)
+      result = await getPayslipsByMonth(month, year, page, actualLimit)
     } else if (employeeId) {
       const filters = { employeeId }
-      result = await getAllPayslips(page, limit, filters)
+      result = await getAllPayslips(page, actualLimit, filters)
     } else {
-      result = await getAllPayslips(page, limit)
+      result = await getAllPayslips(page, actualLimit)
     }
 
     return NextResponse.json({
@@ -28,12 +33,18 @@ export async function GET(request: NextRequest) {
         total: result.total,
         totalPages: result.totalPages,
         currentPage: page,
-        limit,
+        limit: actualLimit,
       },
     })
   } catch (error) {
     console.error("Error fetching payslips:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch payslips" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Failed to fetch payslips: ${error instanceof Error ? error.message : String(error)}`,
+      },
+      { status: 500 },
+    )
   }
 }
 
@@ -51,7 +62,7 @@ export async function POST(request: NextRequest) {
       employeeId: body.employeeId,
       month,
       year,
-    })
+    }).lean()
 
     if (existingPayslip) {
       // Update existing payslip
@@ -68,7 +79,7 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date(),
         },
         { new: true },
-      )
+      ).lean()
 
       return NextResponse.json({
         success: true,

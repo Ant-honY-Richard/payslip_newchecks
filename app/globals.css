@@ -255,3 +255,31 @@ body {
   z-index: 0;
 }
 
+/* Header logo styles */
+.header-logo {
+  display: block;
+  margin: 0 auto;
+  max-width: 80px;
+  height: auto;
+}
+
+/* Ensure incentives subsection is properly styled */
+.incentives-header {
+  background-color: rgba(0, 0, 0, 0.05);
+  font-weight: 500;
+}
+
+/* Ensure everything fits on one page */
+@media print, screen {
+  .payslip-content {
+    max-height: 297mm;
+    overflow: hidden;
+  }
+
+  .compact-table td,
+  .compact-table th {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+}
+
