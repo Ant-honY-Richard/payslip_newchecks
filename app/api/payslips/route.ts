@@ -11,19 +11,31 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get("month")
     const year = searchParams.get("year")
     const employeeId = searchParams.get("employeeId")
+    const clientId = searchParams.get("clientId")
 
     // Use a smaller limit to ensure we don't timeout
     const actualLimit = Math.min(limit, 20)
 
     let result
+        let filters: any = {}
+
+    // Build filters
+    if (employeeId) {
+      filters.employeeId = employeeId
+    }
+
+    if (clientId) {
+      filters.clientId = clientId
+    }
 
     if (month && year) {
-      result = await getPayslipsByMonth(month, year, page, actualLimit)
-    } else if (employeeId) {
-      const filters = { employeeId }
+      // If we have month and year, add them to filters
+      filters.month = month
+      filters.year = year
       result = await getAllPayslips(page, actualLimit, filters)
     } else {
-      result = await getAllPayslips(page, actualLimit)
+      // Otherwise just use the filters we've built (which might be empty)
+      result = await getAllPayslips(page, actualLimit, filters)
     }
 
     return NextResponse.json({

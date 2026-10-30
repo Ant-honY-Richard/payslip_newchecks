@@ -43,10 +43,20 @@ export default function PayslipForm() {
     setError(null)
 
     // Check for admin credentials
-    if (values.employeeId === "ant05" && values.mobileNumber === "0000000000") {
-      // Redirect to admin page - now accepts any month
-      router.push(`/admin`)
-      return
+    if (values.employeeId === "newchecks" && values.mobileNumber === "8105598343") {
+      try {
+        // Set a cookie to indicate admin authentication
+        document.cookie = "admin_authenticated=true; path=/; max-age=3600; SameSite=Strict"
+
+        // Redirect to admin page
+        router.push(`/admin`)
+        return
+      } catch (error) {
+        console.error("Error setting admin cookie:", error)
+        setError("Authentication failed. Please try again.")
+        setIsLoading(false)
+        return
+      }
     }
 
     try {
@@ -80,15 +90,38 @@ export default function PayslipForm() {
   }
 
   // Generate past 12 months excluding current month for employees
-  const months = Array.from({ length: 12 }, (_, i) => {
-    const date = new Date()
-    // Start from last month (i+1 because i starts at 0)
-    date.setMonth(date.getMonth() - (i + 1))
-    return {
-      value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
-      label: date.toLocaleString("default", { month: "long", year: "numeric" }),
+  const months = (() => {
+    // Create a fixed array of exactly 12 months
+    const result = []
+    const today = new Date()
+
+    // Start with the previous month
+    let currentDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+
+    // Generate exactly 12 months
+    for (let i = 0; i < 12; i++) {
+      const year = currentDate.getFullYear()
+      const month = currentDate.getMonth() + 1 // JavaScript months are 0-indexed
+
+      // Create a unique value and id
+      const value = `${year}-${String(month).padStart(2, "0")}`
+      const id = `month-${i}-${value}` // Combine index and value for absolute uniqueness
+
+      result.push({
+        value: value,
+        label: currentDate.toLocaleString("default", { month: "long", year: "numeric" }),
+        id: id,
+      })
+
+      // Move to the previous month
+      currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
     }
-  })
+
+    // Add console log for debugging
+    console.log("Generated months:", result)
+
+    return result
+  })()
 
   return (
     <Form {...form}>
@@ -141,7 +174,7 @@ export default function PayslipForm() {
                 </FormControl>
                 <SelectContent>
                   {months.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
+                    <SelectItem key={month.id} value={month.value}>
                       {month.label}
                     </SelectItem>
                   ))}

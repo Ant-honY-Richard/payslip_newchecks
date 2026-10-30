@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatDate } from "@/utils/dateFormatter"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -34,11 +35,25 @@ export function excelDateToJSDate(excelDate: number) {
 
 // Format currency
 export function formatCurrency(amount: string | number) {
+  if (amount === null || amount === undefined || amount === "") return "₹0"
+
   const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
+  if (isNaN(num)) return "₹0"
+
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(num)
+}
+
+// Format date for display
+export { formatDate }
+
+// Helper function to ensure values are displayed properly
+export function formatValue(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "--"
+  if (typeof value === "number") return value.toString()
+  return value
 }
 

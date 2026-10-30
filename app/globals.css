@@ -2,16 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -47,6 +37,12 @@ body {
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --golden: 43 100% 50%;
+    --golden-light: 43 100% 70%;
+    --golden-dark: 43 100% 30%;
+    --black: 0 0% 0%;
+    --black-light: 0 0% 20%;
+    --black-dark: 0 0% 10%;
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -90,6 +86,13 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
   }
 }
 
@@ -198,12 +201,146 @@ body {
   overflow: hidden !important;
   background-color: white !important;
   padding: 10mm !important;
-  font-size: 10pt !important;
+  font-size: 9pt !important; /* Reduced font size for PDF */
   position: relative;
+}
+
+/* Golden and Black theme for PDF generation */
+.generating-pdf .bg-black {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+.generating-pdf .text-amber-400 {
+  color: #fbbf24 !important;
+}
+
+.generating-pdf .bg-amber-50 {
+  background-color: #fffbeb !important;
+}
+
+.generating-pdf .border-amber-100,
+.generating-pdf .border-amber-200,
+.generating-pdf .border-amber-300 {
+  border-color: #fcd34d !important;
+}
+
+.generating-pdf .text-amber-700 {
+  color: #b45309 !important;
+}
+
+/* Ensure the header layout is preserved in PDF */
+.generating-pdf .flex-col.sm\:flex-row {
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.generating-pdf .items-start.sm\:items-center {
+  align-items: center !important;
+}
+
+/* Ensure the badge is centered in PDF */
+.generating-pdf .text-center {
+  text-align: center !important;
+}
+
+/* Ensure the horizontal lines are visible in PDF */
+.generating-pdf .h-1.bg-amber-500 {
+  height: 1mm !important;
+  background-color: #f59e0b !important;
+  display: block !important;
+}
+
+/* Ensure the separator in the totals section is visible */
+.generating-pdf .h-px.bg-amber-300 {
+  height: 0.5mm !important;
+  background-color: #fcd34d !important;
+  display: block !important;
 }
 
 .generating-pdf * {
   break-inside: avoid;
+}
+
+/* Ensure tables are compact and fit in PDF */
+.generating-pdf table {
+  table-layout: fixed !important;
+  width: 100% !important;
+  margin-bottom: 0 !important;
+  font-size: 8pt !important; /* Smaller font size for tables in PDF */
+}
+
+/* Explicitly set column widths for tables in PDF */
+.generating-pdf th:first-child,
+.generating-pdf td:first-child {
+  width: 70% !important; /* Component column */
+  min-width: 120px !important;
+}
+
+.generating-pdf th:last-child,
+.generating-pdf td:last-child {
+  width: 200% !important; /* Amount column */
+  min-width: 60px !important;
+}
+
+.generating-pdf td,
+.generating-pdf th {
+  padding: 2px 4px !important; /* Reduced padding for PDF */
+  word-break: normal !important;
+  white-space: nowrap !important; /* Prevent wrapping */
+  vertical-align: middle !important;
+}
+
+/* Ensure minimum widths for label columns */
+.generating-pdf .font-semibold {
+  min-width: 80px !important;
+  display: inline-block !important;
+}
+
+/* Make headings more compact */
+.generating-pdf h1,
+.generating-pdf h2,
+.generating-pdf h3 {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* Reduce spacing between sections */
+.generating-pdf .mb-3,
+.generating-pdf .mb-2 {
+  margin-bottom: 4px !important;
+}
+
+/* Make grid layouts more compact */
+.generating-pdf .grid {
+  gap: 4px !important;
+}
+
+/* Ensure consistent spacing */
+.generating-pdf .p-3,
+.generating-pdf .p-2 {
+  padding: 4px !important;
+}
+
+/* Make borders more subtle */
+.generating-pdf .border {
+  border-width: 1px !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Ensure text alignment is consistent */
+.generating-pdf .text-right {
+  text-align: right !important;
+}
+
+/* Ensure font weights are consistent */
+.generating-pdf .font-medium {
+  font-weight: 500 !important;
+}
+
+.generating-pdf .font-bold {
+  font-weight: 700 !important;
 }
 
 /* Mobile optimizations */
@@ -281,5 +418,70 @@ body {
     padding-top: 0.25rem !important;
     padding-bottom: 0.25rem !important;
   }
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  #payslip {
+    width: 210mm !important;
+    height: 297mm !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    padding: 10mm !important;
+  }
+}
+
+@media (max-width: 600px) {
+  #payslipRef {
+    width: 100%; /* Full width on mobile */
+    font-size: 14px; /* Adjust font size for readability */
+  }
+}
+
+/* Ensure tables don't overflow on small screens */
+table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Improve readability of currency values */
+td:last-child {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Enhance table appearance */
+th {
+  font-weight: 600;
+  color: #374151;
+}
+
+td {
+  vertical-align: middle;
+}
+
+/* Add subtle hover effect on table rows */
+tbody tr:hover {
+  background-color: rgba(243, 244, 246, 0.5);
+}
+
+/* Improve spacing between sections */
+.mb-3 {
+  margin-bottom: 0.75rem;
+}
+
+/* Make borders more subtle */
+.border {
+  border-color: #e5e7eb;
+}
+
+/* Enhance card appearance */
+.rounded-lg {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 

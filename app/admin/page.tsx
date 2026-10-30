@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,7 @@ import {
   Trash2,
   Plus,
   Check,
+  Eye,
 } from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -41,6 +42,139 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 
+// Sample EmployeeEditDialog component
+const EmployeeEditDialog: React.FC<{
+  isOpen: boolean
+  onClose: () => void
+  employeeId: string
+  onSave: () => void
+}> = ({ isOpen, onClose, employeeId, onSave }) => {
+  const [employeeData, setEmployeeData] = useState({
+    employeeName: "",
+    mobileNumber: "",
+    department: "",
+    designation: "",
+    doj: "",
+    uanNo: "",
+    esicNo: "",
+  })
+
+  useEffect(() => {
+    if (isOpen && employeeId) {
+      fetch(`/api/employees/${employeeId}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch employee")
+          return res.json()
+        })
+        .then((data) => {
+          if (data.success) {
+            setEmployeeData({
+              employeeName: data.data.employeeName || data.data.name || "",
+              mobileNumber: data.data.mobileNumber || "",
+              department: data.data.department || "",
+              designation: data.data.designation || "",
+              doj: data.data.doj || "",
+              uanNo: data.data.uanNo || "",
+              esicNo: data.data.esicNo || "",
+            })
+          }
+        })
+        .catch((error) => console.error("Error fetching employee:", error))
+    }
+  }, [isOpen, employeeId])
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch(`/api/employees/${employeeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(employeeData),
+      })
+      if (!response.ok) throw new Error("Failed to update employee")
+      onSave()
+      onClose()
+    } catch (error) {
+      console.error("Error saving employee:", error)
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Employee</DialogTitle>
+          <DialogDescription>Update the employee details below. Click Save to apply changes.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="employeeName">Name</Label>
+            <Input
+              id="employeeName"
+              value={employeeData.employeeName}
+              onChange={(e) => setEmployeeData({ ...employeeData, employeeName: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="mobileNumber">Mobile Number</Label>
+            <Input
+              id="mobileNumber"
+              value={employeeData.mobileNumber}
+              onChange={(e) => setEmployeeData({ ...employeeData, mobileNumber: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="department">Department</Label>
+            <Input
+              id="department"
+              value={employeeData.department}
+              onChange={(e) => setEmployeeData({ ...employeeData, department: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="designation">Designation</Label>
+            <Input
+              id="designation"
+              value={employeeData.designation}
+              onChange={(e) => setEmployeeData({ ...employeeData, designation: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="doj">Date of Joining (DD-MM-YYYY)</Label>
+            <Input
+              id="doj"
+              value={employeeData.doj}
+              onChange={(e) => setEmployeeData({ ...employeeData, doj: e.target.value })}
+              placeholder="DD-MM-YYYY"
+            />
+          </div>
+          <div>
+            <Label htmlFor="uanNo">UAN Number</Label>
+            <Input
+              id="uanNo"
+              value={employeeData.uanNo}
+              onChange={(e) => setEmployeeData({ ...employeeData, uanNo: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="esicNo">ESIC Number</Label>
+            <Input
+              id="esicNo"
+              value={employeeData.esicNo}
+              onChange={(e) => setEmployeeData({ ...employeeData, esicNo: e.target.value })}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 interface Employee {
   employeeId: string
   employeeName: string
@@ -57,6 +191,7 @@ interface Payslip {
   month: string
   year: string
   netTakeHome: string
+  clientId?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -85,13 +220,29 @@ export default function AdminPage() {
   const [file, setFile] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [status, setStatus] = useState<{ type: "success" | "error" | "info" | null; message: string }>({
-    type: null,
-    message: "",
-  })
+  const [status, setStatus] = useState<{
+    type: "success" | "error" | "info" | null
+    message: string
+  }>({ type: null, message: "" })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [previewData, setPreviewData] = useState<any[]>([])
   const [showPreview, setShowPreview] = useState(false)
+  const router = useRouter()
+
+  // Check if user is authenticated as admin when component mounts
+  useEffect(() => {
+    const checkAdminAuth = () => {
+      const cookies = document.cookie.split(";")
+      const adminCookie = cookies.find((cookie) => cookie.trim().startsWith("admin_authenticated="))
+
+      if (!adminCookie || adminCookie.trim() !== "admin_authenticated=true") {
+        console.log("Unauthorized access to admin page, redirecting to home")
+        router.push("/")
+      }
+    }
+
+    checkAdminAuth()
+  }, [router])
 
   // Data view states
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -115,6 +266,7 @@ export default function AdminPage() {
   })
   const [searchTerm, setSearchTerm] = useState("")
   const [filterMonth, setFilterMonth] = useState("")
+  const [filterClient, setFilterClient] = useState("")
 
   // New client form
   const [newClientName, setNewClientName] = useState("")
@@ -132,23 +284,46 @@ export default function AdminPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [isBulkDelete, setIsBulkDelete] = useState(false)
 
-  // Generate months including current month for admin
-  const months = Array.from({ length: 13 }, (_, i) => {
-    const date = new Date()
-    // Start from current month (i because we include current month)
-    date.setMonth(date.getMonth() - i)
-    return {
-      value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
-      label: date.toLocaleString("default", { month: "long", year: "numeric" }),
-    }
-  })
+  // Employee edit dialog state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editEmployeeId, setEditEmployeeId] = useState<string>("")
 
-  // Fetch employees when tab changes or search/pagination changes
+  // Generate months including current month for admin
+  const generateMonths = () => {
+    const result = []
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth()
+
+    for (let i = 0; i < 13; i++) {
+      let targetMonth = currentMonth - i
+      let targetYear = currentYear
+
+      while (targetMonth < 0) {
+        targetMonth += 12
+        targetYear -= 1
+      }
+
+      const monthStr = String(targetMonth + 1).padStart(2, "0")
+      const date = new Date(targetYear, targetMonth)
+
+      result.push({
+        id: `month-${targetYear}-${monthStr}-${i}`,
+        value: `${targetYear}-${monthStr}`,
+        label: date.toLocaleString("default", { month: "long", year: "numeric" }),
+      })
+    }
+
+    return result
+  }
+
+  const months = generateMonths()
+
   useEffect(() => {
     if (activeTab === "employees") {
       fetchEmployees(employeePagination.currentPage, searchTerm)
     } else if (activeTab === "payslips") {
-      fetchPayslips(payslipPagination.currentPage, filterMonth)
+      fetchPayslips(payslipPagination.currentPage, filterMonth, filterClient)
     } else if (activeTab === "clients") {
       fetchClients(clientPagination.currentPage, searchTerm)
     }
@@ -159,9 +334,9 @@ export default function AdminPage() {
     clientPagination.currentPage,
     searchTerm,
     filterMonth,
+    filterClient,
   ])
 
-  // Fetch clients on initial load
   useEffect(() => {
     fetchClients()
   }, [])
@@ -170,8 +345,8 @@ export default function AdminPage() {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/employees?page=${page}&limit=10&search=${search}`)
+      if (!response.ok) throw new Error(`Failed to fetch employees: ${response.status}`)
       const data = await response.json()
-
       if (data.success) {
         setEmployees(data.data)
         setEmployeePagination({
@@ -180,26 +355,22 @@ export default function AdminPage() {
           totalItems: data.pagination.total,
         })
       } else {
-        setStatus({
-          type: "error",
-          message: data.error || "Failed to fetch employees",
-        })
+        throw new Error(data.error || "Failed to fetch employees")
       }
     } catch (error) {
       console.error("Error fetching employees:", error)
       setStatus({
         type: "error",
-        message: "Failed to fetch employees. Please try again.",
+        message: error instanceof Error ? error.message : "Failed to fetch employees",
       })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const fetchPayslips = async (page = 1, monthYear = "") => {
+  const fetchPayslips = async (page = 1, monthYear = "", clientId = "") => {
     try {
       setIsLoading(true)
-
       let url = `/api/payslips?page=${page}&limit=10`
 
       if (monthYear) {
@@ -207,9 +378,13 @@ export default function AdminPage() {
         url += `&month=${month}&year=${year}`
       }
 
-      const response = await fetch(url)
-      const data = await response.json()
+      if (clientId) {
+        url += `&clientId=${clientId}`
+      }
 
+      const response = await fetch(url)
+      if (!response.ok) throw new Error(`Failed to fetch payslips: ${response.status}`)
+      const data = await response.json()
       if (data.success) {
         setPayslips(data.data)
         setPayslipPagination({
@@ -218,16 +393,13 @@ export default function AdminPage() {
           totalItems: data.pagination.total,
         })
       } else {
-        setStatus({
-          type: "error",
-          message: data.error || "Failed to fetch payslips",
-        })
+        throw new Error(data.error || "Failed to fetch payslips")
       }
     } catch (error) {
       console.error("Error fetching payslips:", error)
       setStatus({
         type: "error",
-        message: "Failed to fetch payslips. Please try again.",
+        message: error instanceof Error ? error.message : "Failed to fetch payslips",
       })
     } finally {
       setIsLoading(false)
@@ -237,16 +409,9 @@ export default function AdminPage() {
   const fetchClients = async (page = 1, search = "") => {
     try {
       setIsLoading(true)
-      console.log("Fetching clients...")
       const response = await fetch(`/api/clients?page=${page}&limit=10&search=${search}`)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`API returned ${response.status}: ${errorText}`)
-      }
-
+      if (!response.ok) throw new Error(`Failed to fetch clients: ${response.status}`)
       const data = await response.json()
-
       if (data.success) {
         setClients(data.data)
         setClientPagination({
@@ -254,42 +419,35 @@ export default function AdminPage() {
           totalPages: data.pagination.totalPages,
           totalItems: data.pagination.total,
         })
-
-        // Set the default client if no client is selected
         if (!selectedClient && data.data.length > 0) {
           const defaultClient = data.data.find((client: Client) => client.isDefault)
-          if (defaultClient) {
-            setSelectedClient(defaultClient._id)
-          } else if (data.data[0]) {
-            setSelectedClient(data.data[0]._id)
-          }
+          setSelectedClient(defaultClient?._id || data.data[0]._id)
         }
       } else {
-        setStatus({
-          type: "error",
-          message: data.error || "Failed to fetch clients",
-        })
+        throw new Error(data.error || "Failed to fetch clients")
       }
     } catch (error) {
       console.error("Error fetching clients:", error)
       setStatus({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to fetch clients. Please try again.",
+        message: error instanceof Error ? error.message : "Failed to fetch clients",
       })
-
-      // Create a default client in the UI if we can't fetch from the server
       if (clients.length === 0) {
-        setClients([
-          {
-            _id: "default",
-            name: "ADJ Utility Apps Private Limited",
-            address: "#428, 2nd floor 8th block Koramangala, Bangalore, Karnataka- 560095",
-            isDefault: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ])
-        setSelectedClient("default")
+        const defaultClient = {
+          _id: "default",
+          name: "ADJ Utility Apps Private Limited",
+          address: "#428, 2nd floor 8th block Koramangala, Bangalore, Karnataka- 560095",
+          isDefault: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+        setClients([defaultClient])
+        setSelectedClient(defaultClient._id)
+        await fetch("/api/clients", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(defaultClient),
+        })
       }
     } finally {
       setIsLoading(false)
@@ -299,8 +457,6 @@ export default function AdminPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFile = e.target.files[0]
-
-      // Check if file is an Excel file
       if (!selectedFile.name.endsWith(".xlsx") && !selectedFile.name.endsWith(".xls")) {
         setStatus({
           type: "error",
@@ -308,7 +464,6 @@ export default function AdminPage() {
         })
         return
       }
-
       setFile(selectedFile)
       setStatus({ type: null, message: "" })
       setShowPreview(false)
@@ -316,29 +471,83 @@ export default function AdminPage() {
     }
   }
 
-  // Add this function to the AdminPage component
+  const parseNumeric = (value: any): number => {
+    if (value === null || value === undefined || value === "") return 0
+    if (typeof value === "number") return value
+    const parsed = Number.parseFloat(value)
+    return isNaN(parsed) ? 0 : parsed
+  }
+
+  const numberToWords = (num: number): string => {
+    const units = [
+      "",
+      "one",
+      "two",
+      "three",
+      "four",
+      "five",
+      "six",
+      "seven",
+      "eight",
+      "nine",
+      "ten",
+      "eleven",
+      "twelve",
+      "thirteen",
+      "fourteen",
+      "fifteen",
+      "sixteen",
+      "seventeen",
+      "eighteen",
+      "nineteen",
+    ]
+    const tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+
+    if (num === 0) return "zero"
+
+    const convertLessThanOneThousand = (n: number): string => {
+      if (n < 20) return units[n]
+      const digit = n % 10
+      if (n < 100) return tens[Math.floor(n / 10)] + (digit ? "-" + units[digit] : "")
+      return units[Math.floor(n / 100)] + " hundred" + (n % 100 ? " and " + convertLessThanOneThousand(n % 100) : "")
+    }
+
+    let words = ""
+    let chunk = 0
+
+    chunk = Math.floor(num / 100000)
+    if (chunk > 0) {
+      words += convertLessThanOneThousand(chunk) + " lakh"
+      if (chunk > 1) words += "s"
+      num %= 100000
+      if (num > 0) words += " "
+    }
+
+    chunk = Math.floor(num / 1000)
+    if (chunk > 0) {
+      words += convertLessThanOneThousand(chunk) + " thousand"
+      num %= 1000
+      if (num > 0) words += " "
+    }
+
+    if (num > 0) {
+      words += convertLessThanOneThousand(num)
+    }
+
+    return words + " only"
+  }
+
   const processBatchedExcelFile = async () => {
     if (!file) {
-      setStatus({
-        type: "error",
-        message: "Please select an Excel file first",
-      })
+      setStatus({ type: "error", message: "Please select an Excel file first" })
       return
     }
-
     if (!selectedMonth) {
-      setStatus({
-        type: "error",
-        message: "Please select a month first",
-      })
+      setStatus({ type: "error", message: "Please select a month first" })
       return
     }
-
     if (!selectedClient) {
-      setStatus({
-        type: "error",
-        message: "Please select a client first",
-      })
+      setStatus({ type: "error", message: "Please select a client first" })
       return
     }
 
@@ -346,83 +555,63 @@ export default function AdminPage() {
     setStatus({ type: "info", message: "Processing Excel file..." })
 
     try {
-      // Read the Excel file
       const data = await file.arrayBuffer()
       const workbook = XLSX.read(data)
-
-      // Assume the first sheet contains our data
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-
-      // Convert to JSON
       const jsonData = XLSX.utils.sheet_to_json(worksheet)
 
-      // Process the data
-      const processedData = jsonData.map((row: any) => {
-        // Map Excel columns to our data structure
-        return {
-          employeeId: row["Emp ID"] || "",
-          employeeName: row["Employee Name"] || "",
-          mobileNumber: row["Mobile Number"] || "", // Added mobile number field
-          dob: row["DOB"] || "",
-          doj: row["DOJ"] || "",
-          designation: row["Designation"] || "",
-          department: row["Department"] || "",
-          bankName: row["Bank Name"] || "",
-          bankAccountNo: row["Bank Account No"] || "",
-          ifscCode: row["IFSC code"] || "",
-          panNo: row["PAN NO"] || "",
-          pfNumber: row["PF Number"] || "",
-          workingDays: row["Number of days working"] || "",
-          uanNo: row["UAN No"] || "",
-          esicNo: row["ESI No"] || "",
-          extraDays: row["Extra Days"] || "",
-          otHrs: row["OT hrs"] || "",
-          arrearsDays: row["Arrears Days"] || "",
-          lop: row["LOP"] || "",
-          clientId: selectedClient,
+      const processedData = jsonData.map((row: any) => ({
+        employeeId: row["Emp ID"] || "",
+        employeeName: row["Employee Name"] || "",
+        mobileNumber: row["Mobile Number"] || "",
+        dob: row["DOB"] || "",
+        doj: row["DOJ"] || "",
+        designation: row["Designation"] || "",
+        department: row["Department"] || "",
+        bankName: row["Bank Name"] || "",
+        bankAccountNo: row["Bank Account No"] || "",
+        ifscCode: row["IFSC code"] || "",
+        panNo: row["PAN NO"] || "",
+        pfNumber: row["PF Number"] || "",
+        uanNo: row["UAN No"] || "",
+        esicNo: row["ESI No"] || "",
+        workingDays: row["Number of days working"] || "",
+        extraDays: parseNumeric(row["Extra Days"]),
+        otHrs: parseNumeric(row["OT hrs"]),
+        arrearsDays: row["Arrears Days"] || "",
+        lop: row["LOP"] || "",
+        clientId: selectedClient,
+        basic: parseNumeric(row["BASIC"]),
+        hra: parseNumeric(row["HRA"]),
+        specialAllowance: parseNumeric(row["Special Allowance"]),
+        statutoryBonus: parseNumeric(row["Statutory Bonus"]),
+        arrearsAmount: parseNumeric(row["Arrears amount"]),
+        otAmount: parseNumeric(row["OT Amount"]),
+        extraHolidayPay: parseNumeric(row["Extra & Holiday pay"]),
+        attendanceIncentive: parseNumeric(row["Attendance Incentive"]),
+        performanceIncentive: parseNumeric(row["Performance Incentive"]),
+        specialIncentive: parseNumeric(row["Special Incentive"]),
+        professionTax: parseNumeric(row["Profession Tax"]),
+        pfAmount: parseNumeric(row["PF amount"]),
+        esic: parseNumeric(row["ESIC"]),
+        arrearDeduction: parseNumeric(row["Arrear Deduction"]),
+        karmaLife: parseNumeric(row["Karma Life"]),
+        totalGrossA: parseNumeric(row["Total Gross A"] || row["totalGrossA"]), // Direct from Excel
+        grossDeductionB: parseNumeric(row["Gross Deduction B"] || row["grossDeductionB"]), // Direct from Excel
+        netTakeHome: parseNumeric(row["Net Take Home"] || row["netTakeHome"]), // Direct from Excel
+        netPayWords: row["Net Pay Words"] || numberToWords(parseNumeric(row["Net Take Home"] || row["netTakeHome"])),
+        UTRNo: row["UTR No"] || "",
+      }))
 
-          // Earnings
-          basic: row["BASIC"] || "",
-          hra: row["HRA"] || "",
-          specialAllowance: row["Special Allowance"] || "",
-          statutoryBonus: row["Statutory Bonus"] || "",
-          arrearsAmount: row["Arrears amount"] || "",
-          grossEarningsTotal: row["Gross Earnings Total"] || "",
-          otAmount: row["OT Amount"] || "",
-          extraHolidayPay: row["Extra & Holiday pay"] || "",
-          attendanceIncentive: row["Attendance Incentive"] || "",
-          performanceIncentive: row["Performance Incentive"] || "",
-          specialIncentive: row["Special Incentive"] || "",
-
-          // Deductions
-          professionTax: row["Profession Tax"] || "",
-          pfAmount: row["PF amount"] || "",
-          esic: row["ESIC"] || "",
-          arrearDeduction: row["Arrear Deduction"] || "",
-          karmaLife: row["Karma Life"] || "",
-
-          // Totals
-          totalGrossA: row["Total Gross A"] || "",
-          grossDeductionB: row["Gross Deductions B"] || "",
-          netTakeHome: row["Take Home"] || "",
-          netPayWords: row["Net Pay In Words"] || "",
-        }
-      })
-
-      // Show preview of first 10 records
       setPreviewData(processedData.slice(0, 10))
       setShowPreview(true)
 
-      // Extract month and year from selectedMonth (format: YYYY-MM)
       const [year, month] = selectedMonth.split("-")
-
-      // Process in batches of 50 to avoid timeouts
       const batchSize = 50
       let processedCount = 0
       let successCount = 0
       let failedCount = 0
 
-      // Update status to show batch processing
       setStatus({
         type: "info",
         message: `Processing ${processedData.length} records in batches of ${batchSize}...`,
@@ -430,35 +619,22 @@ export default function AdminPage() {
 
       for (let i = 0; i < processedData.length; i += batchSize) {
         const batch = processedData.slice(i, i + batchSize)
-
-        // Update status for each batch
         setStatus({
           type: "info",
-          message: `Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(processedData.length / batchSize)}...`,
+          message: `Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(
+            processedData.length / batchSize,
+          )}...`,
         })
 
         try {
-          // Save batch to MongoDB via API
           const response = await fetch("/api/payslips/bulk", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              payslips: batch,
-              month,
-              year,
-              clientId: selectedClient,
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ payslips: batch, month, year, clientId: selectedClient }),
           })
-
+          if (!response.ok) throw new Error(`Batch failed: ${response.status}`)
           const result = await response.json()
-
-          if (!response.ok || !result.success) {
-            throw new Error(result.error || "Failed to save batch to database")
-          }
-
-          // Update counts
+          if (!result.success) throw new Error(result.error || "Failed to save batch")
           processedCount += result.processedCount || batch.length
           successCount += result.results.filter((r: any) => r.success).length
           failedCount += result.results.filter((r: any) => !r.success).length
@@ -468,19 +644,15 @@ export default function AdminPage() {
         }
       }
 
-      // Success message
       setStatus({
         type: "success",
-        message: `Successfully processed ${successCount} of ${processedData.length} employee records for ${selectedMonth}. ${failedCount} records failed.`,
+        message: `Successfully processed ${successCount} of ${processedData.length} records for ${selectedMonth}. ${failedCount} failed.`,
       })
     } catch (error) {
       console.error("Error processing Excel file:", error)
       setStatus({
         type: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Error processing Excel file. Please check the format and try again.",
+        message: error instanceof Error ? error.message : "Error processing Excel file",
       })
       setShowPreview(false)
     } finally {
@@ -500,7 +672,12 @@ export default function AdminPage() {
   }
 
   const handleMonthFilter = (value: string) => {
-    setFilterMonth(value)
+    setFilterMonth(value === "all" ? "" : value)
+    setPayslipPagination({ ...payslipPagination, currentPage: 1 })
+  }
+
+  const handleClientFilter = (value: string) => {
+    setFilterClient(value === "all" ? "" : value)
     setPayslipPagination({ ...payslipPagination, currentPage: 1 })
   }
 
@@ -518,20 +695,14 @@ export default function AdminPage() {
 
   const handleAddClient = async () => {
     if (!newClientName.trim()) {
-      setStatus({
-        type: "error",
-        message: "Client name is required",
-      })
+      setStatus({ type: "error", message: "Client name is required" })
       return
     }
-
     try {
       setIsAddingClient(true)
       const response = await fetch("/api/clients", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newClientName,
           address: newClientAddress,
@@ -541,28 +712,16 @@ export default function AdminPage() {
           isDefault: newClientIsDefault,
         }),
       })
-
+      if (!response.ok) throw new Error(`Failed to add client: ${response.status}`)
       const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to add client")
-      }
-
-      // Success message
-      setStatus({
-        type: "success",
-        message: "Client added successfully",
-      })
-
-      // Reset form
+      if (!result.success) throw new Error(result.error || "Failed to add client")
+      setStatus({ type: "success", message: "Client added successfully" })
       setNewClientName("")
       setNewClientAddress("")
       setNewClientContactPerson("")
       setNewClientEmail("")
       setNewClientPhone("")
       setNewClientIsDefault(false)
-
-      // Refresh clients
       fetchClients()
     } catch (error) {
       console.error("Error adding client:", error)
@@ -579,11 +738,9 @@ export default function AdminPage() {
     try {
       if (deleteType === "employee") {
         if (isBulkDelete) {
-          // Bulk delete employees
           for (const employeeId of selectedEmployees) {
-            await fetch(`/api/employees/${employeeId}`, {
-              method: "DELETE",
-            })
+            const response = await fetch(`/api/employees/${employeeId}`, { method: "DELETE" })
+            if (!response.ok) throw new Error(`Failed to delete employee ${employeeId}`)
           }
           setStatus({
             type: "success",
@@ -591,89 +748,49 @@ export default function AdminPage() {
           })
           setSelectedEmployees([])
         } else if (deleteTarget) {
-          // Single delete employee
-          const response = await fetch(`/api/employees/${deleteTarget}`, {
-            method: "DELETE",
-          })
-          const result = await response.json()
-          if (!response.ok || !result.success) {
-            throw new Error(result.error || "Failed to delete employee")
-          }
-          setStatus({
-            type: "success",
-            message: "Employee deleted successfully",
-          })
+          const response = await fetch(`/api/employees/${deleteTarget}`, { method: "DELETE" })
+          if (!response.ok) throw new Error(`Failed to delete employee ${deleteTarget}`)
+          setStatus({ type: "success", message: "Employee deleted successfully" })
         }
         fetchEmployees(employeePagination.currentPage, searchTerm)
       } else if (deleteType === "payslip") {
         if (isBulkDelete) {
-          // Bulk delete payslips
           const employeeIds = selectedPayslips.map((p) => p.employeeId)
           const months = selectedPayslips.map((p) => p.month)
           const years = selectedPayslips.map((p) => p.year)
-
           const response = await fetch(`/api/payslips/delete`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              employeeIds,
-              months,
-              years,
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ employeeIds, months, years }),
           })
-
+          if (!response.ok) throw new Error(`Failed to delete payslips: ${response.status}`)
           const result = await response.json()
-          if (!response.ok || !result.success) {
-            throw new Error(result.error || "Failed to delete payslips")
-          }
-
+          if (!result.success) throw new Error(result.error || "Failed to delete payslips")
           setStatus({
             type: "success",
             message: `${result.deletedCount} payslips deleted successfully`,
           })
           setSelectedPayslips([])
         } else if (deleteTarget) {
-          // Single delete payslip
           const [employeeId, month, year] = deleteTarget.split(":")
           const response = await fetch(`/api/payslips/delete`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              employeeIds: [employeeId],
-              months: [month],
-              years: [year],
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ employeeIds: [employeeId], months: [month], years: [year] }),
           })
-
+          if (!response.ok) throw new Error(`Failed to delete payslip: ${response.status}`)
           const result = await response.json()
-          if (!response.ok || !result.success) {
-            throw new Error(result.error || "Failed to delete payslip")
-          }
-
-          setStatus({
-            type: "success",
-            message: "Payslip deleted successfully",
-          })
+          if (!result.success) throw new Error(result.error || "Failed to delete payslip")
+          setStatus({ type: "success", message: "Payslip deleted successfully" })
         }
-        fetchPayslips(payslipPagination.currentPage, filterMonth)
+        fetchPayslips(payslipPagination.currentPage, filterMonth, filterClient)
       } else if (deleteType === "client") {
         if (deleteTarget) {
-          // Delete client
-          const response = await fetch(`/api/clients/${deleteTarget}`, {
-            method: "DELETE",
-          })
+          const response = await fetch(`/api/clients/${deleteTarget}`, { method: "DELETE" })
+          if (!response.ok) throw new Error(`Failed to delete client: ${response.status}`)
           const result = await response.json()
-          if (!response.ok || !result.success) {
-            throw new Error(result.error || "Failed to delete client")
-          }
-          setStatus({
-            type: "success",
-            message: "Client deleted successfully",
-          })
+          if (!result.success) throw new Error(result.error || "Failed to delete client")
+          setStatus({ type: "success", message: "Client deleted successfully" })
           fetchClients(clientPagination.currentPage, searchTerm)
         }
       }
@@ -694,24 +811,13 @@ export default function AdminPage() {
     try {
       const response = await fetch(`/api/clients/${clientId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          isDefault: true,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDefault: true }),
       })
-
+      if (!response.ok) throw new Error(`Failed to set default client: ${response.status}`)
       const result = await response.json()
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to set default client")
-      }
-
-      setStatus({
-        type: "success",
-        message: "Default client updated successfully",
-      })
-
+      if (!result.success) throw new Error(result.error || "Failed to set default client")
+      setStatus({ type: "success", message: "Default client updated successfully" })
       fetchClients(clientPagination.currentPage, searchTerm)
     } catch (error) {
       console.error("Error setting default client:", error)
@@ -723,13 +829,9 @@ export default function AdminPage() {
   }
 
   const toggleEmployeeSelection = (employeeId: string) => {
-    setSelectedEmployees((prev) => {
-      if (prev.includes(employeeId)) {
-        return prev.filter((id) => id !== employeeId)
-      } else {
-        return [...prev, employeeId]
-      }
-    })
+    setSelectedEmployees((prev) =>
+      prev.includes(employeeId) ? prev.filter((id) => id !== employeeId) : [...prev, employeeId],
+    )
   }
 
   const togglePayslipSelection = (payslip: { employeeId: string; month: string; year: string }) => {
@@ -737,15 +839,117 @@ export default function AdminPage() {
       const exists = prev.some(
         (p) => p.employeeId === payslip.employeeId && p.month === payslip.month && p.year === payslip.year,
       )
-
-      if (exists) {
-        return prev.filter(
-          (p) => !(p.employeeId === payslip.employeeId && p.month === payslip.month && p.year === payslip.year),
-        )
-      } else {
-        return [...prev, payslip]
-      }
+      return exists
+        ? prev.filter(
+            (p) => !(p.employeeId === payslip.employeeId && p.month === payslip.month && p.year === payslip.year),
+          )
+        : [...prev, payslip]
     })
+  }
+
+  const openEmployeeEditDialog = (employeeId: string) => {
+    setEditEmployeeId(employeeId)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEmployeeEditSave = () => {
+    fetchEmployees(employeePagination.currentPage, searchTerm)
+  }
+
+  const handleMonthWiseDelete = async (month: string, year: string) => {
+    try {
+      const monthLabel = months.find((m) => m.value === `${year}-${month}`)?.label || `${month}/${year}`
+      if (!confirm(`Are you sure you want to delete ALL payslips for ${monthLabel}? This action cannot be undone.`)) {
+        return
+      }
+
+      setIsLoading(true)
+      setStatus({ type: "info", message: `Deleting all payslips for ${monthLabel}...` })
+
+      const response = await fetch(`/api/payslips/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          months: [month],
+          years: [year],
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || `Failed to delete payslips: ${response.status}`)
+      }
+
+      setStatus({
+        type: "success",
+        message: `${result.deletedCount || "All"} payslips for ${monthLabel} deleted successfully`,
+      })
+
+      fetchPayslips(payslipPagination.currentPage, filterMonth, filterClient)
+    } catch (error) {
+      console.error("Error deleting payslips:", error)
+      setStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to delete payslips",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleMonthClientDelete = async (month: string, year: string, clientId: string) => {
+    try {
+      const monthLabel = months.find((m) => m.value === `${year}-${month}`)?.label || `${month}/${year}`
+      const clientName = clients.find((c) => c._id === clientId)?.name || "Selected Client"
+
+      if (
+        !confirm(
+          `Are you sure you want to delete ALL payslips for ${monthLabel} from ${clientName}? This action cannot be undone.`,
+        )
+      ) {
+        return
+      }
+
+      setIsLoading(true)
+      setStatus({ type: "info", message: `Deleting payslips for ${monthLabel} from ${clientName}...` })
+
+      const response = await fetch(`/api/payslips/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          months: [month],
+          years: [year],
+          clientId: clientId,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || `Failed to delete payslips: ${response.status}`)
+      }
+
+      setStatus({
+        type: "success",
+        message: `${result.deletedCount || "All"} payslips for ${monthLabel} from ${clientName} deleted successfully`,
+      })
+
+      fetchPayslips(payslipPagination.currentPage, filterMonth, filterClient)
+    } catch (error) {
+      console.error("Error deleting payslips:", error)
+      setStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to delete payslips",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleLogout = () => {
+    document.cookie = "admin_authenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict"
+    router.push("/")
   }
 
   return (
@@ -757,6 +961,9 @@ export default function AdminPage() {
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
             </Button>
           </Link>
+          <Button variant="destructive" size="sm" onClick={handleLogout}>
+            Logout
+          </Button>
         </div>
 
         <Card className="shadow-lg border-t-4 border-t-primary mb-4 sm:mb-8">
@@ -823,7 +1030,7 @@ export default function AdminPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {months.map((month) => (
-                        <SelectItem key={month.value} value={month.value} className="text-xs sm:text-sm">
+                        <SelectItem key={month.id} value={month.value} className="text-xs sm:text-sm">
                           {month.label}
                         </SelectItem>
                       ))}
@@ -853,7 +1060,6 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                {/* Replace the processExcelFile function call in the Button onClick with this: */}
                 <Button
                   onClick={processBatchedExcelFile}
                   disabled={!file || !selectedMonth || !selectedClient || isProcessing}
@@ -1037,19 +1243,30 @@ export default function AdminPage() {
                                 <TableCell className="text-xs">{employee.designation}</TableCell>
                                 <TableCell className="text-xs">{formatDate(employee.updatedAt)}</TableCell>
                                 <TableCell>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 text-red-500"
-                                    onClick={() => {
-                                      setDeleteType("employee")
-                                      setDeleteTarget(employee.employeeId)
-                                      setIsDeleteDialogOpen(true)
-                                    }}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete</span>
-                                  </Button>
+                                  <div className="flex space-x-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-blue-500"
+                                      onClick={() => openEmployeeEditDialog(employee.employeeId)}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                      <span className="sr-only">View/Edit</span>
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-red-500"
+                                      onClick={() => {
+                                        setDeleteType("employee")
+                                        setDeleteTarget(employee.employeeId)
+                                        setIsDeleteDialogOpen(true)
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      <span className="sr-only">Delete</span>
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))
@@ -1118,8 +1335,29 @@ export default function AdminPage() {
                             All months
                           </SelectItem>
                           {months.map((month) => (
-                            <SelectItem key={month.value} value={month.value} className="text-xs sm:text-sm">
+                            <SelectItem key={month.id} value={month.value} className="text-xs sm:text-sm">
                               {month.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex-1">
+                      <Label htmlFor="filterClient" className="mb-2 block text-xs sm:text-sm">
+                        Filter by Client
+                      </Label>
+                      <Select onValueChange={handleClientFilter} value={filterClient}>
+                        <SelectTrigger id="filterClient" className="text-xs sm:text-sm">
+                          <SelectValue placeholder="All clients" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all" className="text-xs sm:text-sm">
+                            All clients
+                          </SelectItem>
+                          {clients.map((client) => (
+                            <SelectItem key={client._id} value={client._id} className="text-xs sm:text-sm">
+                              {client.name} {client.isDefault ? "(Default)" : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1127,7 +1365,42 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
+                    {filterMonth && filterMonth !== "all" && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          setDeleteType("payslip")
+                          setIsBulkDelete(true)
+                          const [year, month] = filterMonth.split("-")
+                          handleMonthWiseDelete(month, year)
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" /> Delete All Payslips for{" "}
+                        {months.find((m) => m.value === filterMonth)?.label || filterMonth}
+                      </Button>
+                    )}
+
+                    {filterMonth && filterMonth !== "all" && filterClient && filterClient !== "all" && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          setDeleteType("payslip")
+                          setIsBulkDelete(true)
+                          const [year, month] = filterMonth.split("-")
+                          handleMonthClientDelete(month, year, filterClient)
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" /> Delete Payslips for{" "}
+                        {months.find((m) => m.value === filterMonth)?.label || filterMonth}{" "}
+                        from {clients.find((c) => c._id === filterClient)?.name || "Selected Client"}
+                      </Button>
+                    )}
+
                     {selectedPayslips.length > 0 && (
                       <Button
                         variant="destructive"
@@ -1172,7 +1445,8 @@ export default function AdminPage() {
                             <TableHead className="text-xs">ID</TableHead>
                             <TableHead className="text-xs">Month</TableHead>
                             <TableHead className="text-xs">Year</TableHead>
-                            <TableHead className="text-xs">Net Pay</TableHead>
+                            <TableHead className="text-xs">Client</TableHead>
+                            <TableHead className="text-right text-xs">Net Pay</TableHead>
                             <TableHead className="text-xs">Created</TableHead>
                             <TableHead className="text-xs">Updated</TableHead>
                             <TableHead className="text-xs">Actions</TableHead>
@@ -1222,23 +1496,37 @@ export default function AdminPage() {
                                   })}
                                 </TableCell>
                                 <TableCell className="text-xs">{payslip.year}</TableCell>
-                                <TableCell className="text-xs">₹{payslip.netTakeHome}</TableCell>
+                                <TableCell className="text-xs">
+                                  {clients.find((c) => c._id === payslip.clientId)?.name || "Unknown Client"}
+                                </TableCell>
+                                <TableCell className="text-xs text-right">₹{payslip.netTakeHome}</TableCell>
                                 <TableCell className="text-xs">{formatDate(payslip.createdAt)}</TableCell>
                                 <TableCell className="text-xs">{formatDate(payslip.updatedAt)}</TableCell>
                                 <TableCell>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 text-red-500"
-                                    onClick={() => {
-                                      setDeleteType("payslip")
-                                      setDeleteTarget(`${payslip.employeeId}:${payslip.month}:${payslip.year}`)
-                                      setIsDeleteDialogOpen(true)
-                                    }}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete</span>
-                                  </Button>
+                                  <div className="flex space-x-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-blue-500"
+                                      onClick={() => openEmployeeEditDialog(payslip.employeeId)}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                      <span className="sr-only">View/Edit</span>
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-red-500"
+                                      onClick={() => {
+                                        setDeleteType("payslip")
+                                        setDeleteTarget(`${payslip.employeeId}:${payslip.month}:${payslip.year}`)
+                                        setIsDeleteDialogOpen(true)
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      <span className="sr-only">Delete</span>
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))
@@ -1538,7 +1826,6 @@ export default function AdminPage() {
         </Card>
       </div>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -1561,6 +1848,13 @@ export default function AdminPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EmployeeEditDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        employeeId={editEmployeeId}
+        onSave={handleEmployeeEditSave}
+      />
     </div>
   )
 }

@@ -53,6 +53,9 @@ export async function connectToDatabase() {
 const clientSchema = new Schema({
   name: { type: String, required: true },
   address: { type: String },
+  contactPerson: { type: String },
+  email: { type: String },
+  phone: { type: String },
   isDefault: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
@@ -61,15 +64,22 @@ const clientSchema = new Schema({
 // Employee Schema
 const employeeSchema = new Schema({
   employeeId: { type: String, required: true, unique: true },
-  name: { type: String, required: true },
+  name: { type: String, required: true }, // Primary field for employee name
+  employeeName: { type: String }, // Alternative field for compatibility
   email: { type: String },
   mobileNumber: { type: String },
   designation: { type: String },
   department: { type: String },
-  joiningDate: { 
-    type: Date,
-    get: (date: Date) => date?.toISOString() // Store as ISO string
-  },
+  joiningDate: { type: Date },
+  doj: { type: String }, // String format date of joining
+  dob: { type: String }, // String format date of birth
+  bankName: { type: String },
+  bankAccountNo: { type: String },
+  ifscCode: { type: String },
+  panNo: { type: String },
+  pfNumber: { type: String },
+  uanNo: { type: String },
+  esicNo: { type: String },
   clientId: { type: Schema.Types.ObjectId, ref: "Client" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
@@ -78,26 +88,34 @@ const employeeSchema = new Schema({
 // Payslip Schema
 const payslipSchema = new Schema({
   employeeId: { type: String, required: true },
-  month: { type: String, required: true }, // Format: YYYY-MM
-  year: { type: String, required: true },
+  month: { type: String, required: true }, // e.g., "02"
+  year: { type: String, required: true }, // e.g., "2025"
+  workingDays: { type: String, default: "" },
+  extraDays: { type: Number, default: 0 },
+  otHrs: { type: Number, default: 0 },
+  arrearsDays: { type: String, default: "" },
+  lop: { type: String, default: "" },
   basic: { type: Number, default: 0 },
   hra: { type: Number, default: 0 },
-  conveyanceAllowance: { type: Number, default: 0 },
   specialAllowance: { type: Number, default: 0 },
+  statutoryBonus: { type: Number, default: 0 },
+  arrearsAmount: { type: Number, default: 0 },
   otAmount: { type: Number, default: 0 },
-  otHrs: { type: Number, default: 0 },
-  extraDays: { type: Number, default: 0 },
   extraHolidayPay: { type: Number, default: 0 },
   attendanceIncentive: { type: Number, default: 0 },
   performanceIncentive: { type: Number, default: 0 },
   specialIncentive: { type: Number, default: 0 },
-  statutoryBonus: { type: Number, default: 0 },
-  professionalTax: { type: Number, default: 0 },
-  incomeTax: { type: Number, default: 0 },
+  professionTax: { type: Number, default: 0 }, // Renamed from professionalTax
   pfAmount: { type: Number, default: 0 },
   esic: { type: Number, default: 0 },
+  arrearDeduction: { type: Number, default: 0 },
   karmaLife: { type: Number, default: 0 },
-  loanDeduction: { type: Number, default: 0 },
+  totalGrossA: { type: Number, default: 0 },
+  grossDeductionB: { type: Number, default: 0 },
+  netTakeHome: { type: Number, default: 0 },
+  netPayWords: { type: String, default: "" },
+  clientId: { type: Schema.Types.ObjectId, ref: "Client" },
+  UTRNo: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 })
@@ -107,31 +125,24 @@ export const Client = mongoose.models.Client || mongoose.model("Client", clientS
 export const Employee = mongoose.models.Employee || mongoose.model("Employee", employeeSchema)
 export const Payslip = mongoose.models.Payslip || mongoose.model("Payslip", payslipSchema)
 
-// Helper function to get all employees with pagination
+// Helper functions
 export async function getAllEmployees(page = 1, limit = 10, search = "") {
   try {
     await connectToDatabase()
-
     const skip = (page - 1) * limit
-
-    // Build query
     const query = search
       ? {
           $or: [
             { employeeId: { $regex: search, $options: "i" } },
             { name: { $regex: search, $options: "i" } },
+            { employeeName: { $regex: search, $options: "i" } },
             { department: { $regex: search, $options: "i" } },
           ],
         }
       : {}
-
-    // Get employees with lean() for better performance
     const employees = await Employee.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean().exec()
-
-    // Get total count
     const total = await Employee.countDocuments(query).exec()
     const totalPages = Math.ceil(total / limit)
-
     return { employees, total, totalPages }
   } catch (error) {
     console.error("Error in getAllEmployees:", error)
@@ -139,30 +150,14 @@ export async function getAllEmployees(page = 1, limit = 10, search = "") {
   }
 }
 
-// Helper function to get all payslips with pagination
 export async function getAllPayslips(page = 1, limit = 10, filters: any = {}) {
   try {
     await connectToDatabase()
-
     const skip = (page - 1) * limit
-
-    // Build query
     const query = filters
-
-    // Get payslips with lean() for better performance
-    const payslips = await Payslip.find(query)
-    .populate("employeeId") // Ensure employee details are fully available
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean()
-    .exec();
-  
-
-    // Get total count
+    const payslips = await Payslip.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean().exec()
     const total = await Payslip.countDocuments(query).exec()
     const totalPages = Math.ceil(total / limit)
-
     return { payslips, total, totalPages }
   } catch (error) {
     console.error("Error in getAllPayslips:", error)
@@ -170,23 +165,14 @@ export async function getAllPayslips(page = 1, limit = 10, filters: any = {}) {
   }
 }
 
-// Helper function to get payslips by month with pagination
 export async function getPayslipsByMonth(month: string, year: string, page = 1, limit = 10) {
   try {
     await connectToDatabase()
-
     const skip = (page - 1) * limit
-
-    // Build query
     const query = { month, year }
-
-    // Get payslips with lean() for better performance
     const payslips = await Payslip.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean().exec()
-
-    // Get total count
     const total = await Payslip.countDocuments(query).exec()
     const totalPages = Math.ceil(total / limit)
-
     return { payslips, total, totalPages }
   } catch (error) {
     console.error("Error in getPayslipsByMonth:", error)
