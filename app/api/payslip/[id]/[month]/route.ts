@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase, Employee, Payslip, Client } from "@/lib/mongodb"
+import { COMPANY_ADDRESS } from "@/lib/company"
 
 export const maxDuration = 9
 
@@ -148,7 +149,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       month: payslip.month || monthNum,
       year: payslip.year || year,
       clientName: client ? client.name : "Newchecks Solutions Pvt. Ltd",
-      clientAddress: client ? client.address : "#428, 2nd floor 8th block Koramangala, Bangalore, Karnataka- 560095",
+      clientAddress: client ? client.address : COMPANY_ADDRESS,
     }
 
     console.log(`Returning payslipData for ${id}:`, payslipData)

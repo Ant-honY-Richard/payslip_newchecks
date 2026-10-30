@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import PayslipForm from "@/components/payslip-form"
+import { COMPANY_ADDRESS } from "@/lib/company"
 
 export default function Home() {
   return (
@@ -17,8 +18,7 @@ export default function Home() {
 
         <div className="mt-8 text-center text-sm text-muted-foreground">
           <p>Newchecks Solutions Private Limited</p>
-          <p className="mt-1">#428, 2nd floor 8th block Koramangala</p>
-          <p className="mt-1">Bangalore, Karnataka- 560095</p>
+          <p className="mt-1">{COMPANY_ADDRESS}</p>
         </div>
       </div>
     </div>

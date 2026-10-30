@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { COMPANY_ADDRESS } from "@/lib/company"
+import ExcelTemplateDownload from "@/components/excel-template-download"
 import {
   ArrowLeft,
   FileSpreadsheet,
@@ -436,7 +438,7 @@ export default function AdminPage() {
         const defaultClient = {
           _id: "default",
           name: "ADJ Utility Apps Private Limited",
-          address: "#428, 2nd floor 8th block Koramangala, Bangalore, Karnataka- 560095",
+          address: COMPANY_ADDRESS,
           isDefault: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -560,48 +562,76 @@ export default function AdminPage() {
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
       const jsonData = XLSX.utils.sheet_to_json(worksheet)
 
-      const processedData = jsonData.map((row: any) => ({
-        employeeId: row["Emp ID"] || "",
-        employeeName: row["Employee Name"] || "",
-        mobileNumber: row["Mobile Number"] || "",
-        dob: row["DOB"] || "",
-        doj: row["DOJ"] || "",
-        designation: row["Designation"] || "",
-        department: row["Department"] || "",
-        bankName: row["Bank Name"] || "",
-        bankAccountNo: row["Bank Account No"] || "",
-        ifscCode: row["IFSC code"] || "",
-        panNo: row["PAN NO"] || "",
-        pfNumber: row["PF Number"] || "",
-        uanNo: row["UAN No"] || "",
-        esicNo: row["ESI No"] || "",
-        workingDays: row["Number of days working"] || "",
-        extraDays: parseNumeric(row["Extra Days"]),
-        otHrs: parseNumeric(row["OT hrs"]),
-        arrearsDays: row["Arrears Days"] || "",
-        lop: row["LOP"] || "",
-        clientId: selectedClient,
-        basic: parseNumeric(row["BASIC"]),
-        hra: parseNumeric(row["HRA"]),
-        specialAllowance: parseNumeric(row["Special Allowance"]),
-        statutoryBonus: parseNumeric(row["Statutory Bonus"]),
-        arrearsAmount: parseNumeric(row["Arrears amount"]),
-        otAmount: parseNumeric(row["OT Amount"]),
-        extraHolidayPay: parseNumeric(row["Extra & Holiday pay"]),
-        attendanceIncentive: parseNumeric(row["Attendance Incentive"]),
-        performanceIncentive: parseNumeric(row["Performance Incentive"]),
-        specialIncentive: parseNumeric(row["Special Incentive"]),
-        professionTax: parseNumeric(row["Profession Tax"]),
-        pfAmount: parseNumeric(row["PF amount"]),
-        esic: parseNumeric(row["ESIC"]),
-        arrearDeduction: parseNumeric(row["Arrear Deduction"]),
-        karmaLife: parseNumeric(row["Karma Life"]),
-        totalGrossA: parseNumeric(row["Total Gross A"] || row["totalGrossA"]), // Direct from Excel
-        grossDeductionB: parseNumeric(row["Gross Deduction B"] || row["grossDeductionB"]), // Direct from Excel
-        netTakeHome: parseNumeric(row["Net Take Home"] || row["netTakeHome"]), // Direct from Excel
-        netPayWords: row["Net Pay Words"] || numberToWords(parseNumeric(row["Net Take Home"] || row["netTakeHome"])),
-        UTRNo: row["UTR No"] || "",
-      }))
+      // First non-empty value among header spellings (template headers first, older spellings after)
+      const pick = (row: any, ...keys: string[]) => {
+        for (const key of keys) {
+          if (row[key] !== undefined && row[key] !== null && row[key] !== "") return row[key]
+        }
+        return undefined
+      }
+
+      const processedData = jsonData.map((row: any) => {
+        const earnings = {
+          basic: parseNumeric(row["BASIC"]),
+          hra: parseNumeric(row["HRA"]),
+          specialAllowance: parseNumeric(row["Special Allowance"]),
+          statutoryBonus: parseNumeric(row["Statutory Bonus"]),
+          arrearsAmount: parseNumeric(row["Arrears amount"]),
+          otAmount: parseNumeric(row["OT Amount"]),
+          extraHolidayPay: parseNumeric(row["Extra & Holiday pay"]),
+          attendanceIncentive: parseNumeric(row["Attendance Incentive"]),
+          performanceIncentive: parseNumeric(row["Performance Incentive"]),
+          specialIncentive: parseNumeric(row["Special Incentive"]),
+        }
+        const deductions = {
+          professionTax: parseNumeric(row["Profession Tax"]),
+          pfAmount: parseNumeric(row["PF amount"]),
+          esic: parseNumeric(row["ESIC"]),
+          arrearDeduction: parseNumeric(row["Arrear Deduction"]),
+          // "Other Deductions" replaces the old "Karma Life" column; still stored as karmaLife
+          karmaLife: parseNumeric(pick(row, "Other Deductions", "Karma Life")),
+        }
+        const sum = (values: object) => Object.values(values).reduce((a: number, b: number) => a + b, 0)
+
+        // Totals come from the sheet when filled in, otherwise they are calculated from the components
+        const totalGrossACell = pick(row, "Total Gross A", "totalGrossA")
+        const grossDeductionBCell = pick(row, "Gross Deductions B", "Gross Deduction B", "grossDeductionB")
+        const totalGrossA = totalGrossACell !== undefined ? parseNumeric(totalGrossACell) : sum(earnings)
+        const grossDeductionB =
+          grossDeductionBCell !== undefined ? parseNumeric(grossDeductionBCell) : sum(deductions)
+        const netTakeHomeCell = pick(row, "Take Home", "Net Take Home", "netTakeHome")
+        const netTakeHome = netTakeHomeCell !== undefined ? parseNumeric(netTakeHomeCell) : totalGrossA - grossDeductionB
+
+        return {
+          employeeId: row["Emp ID"] || "",
+          employeeName: row["Employee Name"] || "",
+          mobileNumber: row["Mobile Number"] || "",
+          dob: row["DOB"] || "",
+          doj: row["DOJ"] || "",
+          designation: row["Designation"] || "",
+          department: row["Department"] || "",
+          bankName: row["Bank Name"] || "",
+          bankAccountNo: row["Bank Account No"] || "",
+          ifscCode: row["IFSC code"] || "",
+          panNo: row["PAN NO"] || "",
+          pfNumber: row["PF Number"] || "",
+          uanNo: row["UAN No"] || "",
+          esicNo: row["ESI No"] || "",
+          workingDays: row["Number of days working"] || "",
+          extraDays: parseNumeric(row["Extra Days"]),
+          otHrs: parseNumeric(row["OT hrs"]),
+          arrearsDays: row["Arrears Days"] || "",
+          lop: row["LOP"] || "",
+          clientId: selectedClient,
+          ...earnings,
+          ...deductions,
+          totalGrossA,
+          grossDeductionB,
+          netTakeHome,
+          netPayWords: pick(row, "Net Pay In Words", "Net Pay Words") || numberToWords(netTakeHome),
+          UTRNo: row["UTR No"] || "",
+        }
+      })
 
       setPreviewData(processedData.slice(0, 10))
       setShowPreview(true)
@@ -1039,9 +1069,12 @@ export default function AdminPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="file" className="text-xs sm:text-sm">
-                    Upload Excel File
-                  </Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="file" className="text-xs sm:text-sm">
+                      Upload Excel File
+                    </Label>
+                    <ExcelTemplateDownload />
+                  </div>
                   <div className="flex items-center gap-2">
                     <Input
                       id="file"

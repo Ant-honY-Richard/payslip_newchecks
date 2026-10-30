@@ -639,7 +639,17 @@ export default function EmployeeEditDialog({ isOpen, onClose, employeeId, onSave
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="karmaLife">Karma Life</Label>
+                    <Label htmlFor="arrearDeduction">Arrear Deduction</Label>
+                    <Input
+                      id="arrearDeduction"
+                      type="number"
+                      value={selectedPayslip.arrearDeduction || ""}
+                      onChange={(e) => handlePayslipChange("arrearDeduction", e.target.value)}
+                      className="border-gray-300 focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="karmaLife">Other Deductions</Label>
                     <Input
                       id="karmaLife"
                       type="number"

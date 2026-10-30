@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
+import { COMPANY_ADDRESS } from "@/lib/company"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 9
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
       try {
         const defaultClient = {
           name: "Newchecks Solutions Pvt. Ltd",
-          address: "#428, 2nd floor 8th block Koramangala, Bangalore, Karnataka- 560095",
+          address: COMPANY_ADDRESS,
           isDefault: true,
           createdAt: new Date(),
           updatedAt: new Date(),

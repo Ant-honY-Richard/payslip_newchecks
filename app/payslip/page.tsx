@@ -12,6 +12,7 @@ import html2canvas from "html2canvas"
 import Image from "next/image"
 import { toast } from "@/components/ui/use-toast"
 import { ToastAction } from "@/components/ui/toast"
+import { COMPANY_ADDRESS, COMPANY_LOGO, COMPANY_NAME } from "@/lib/company"
 
 // PayslipData Interface
 interface PayslipData {
@@ -300,19 +301,16 @@ export default function PayslipPage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center">
                 <div className="flex-shrink-0 mr-4 mb-2 sm:mb-0">
                   <Image
-                    src="/images/header_logo.png"
+                    src={COMPANY_LOGO}
                     alt="Newchecks Solutions"
-                    width={60}
-                    height={60}
+                    width={80}
+                    height={80}
                     className="object-contain"
                   />
                 </div>
                 <div className="text-left">
-                  <h1 className="text-xl sm:text-2xl font-bold">Newchecks Solutions Pvt. Ltd</h1>
-                  <p className="text-xs sm:text-sm text-gray-300">
-                    {payslipData.clientAddress ||
-                      "#428, 2nd floor 8th block Koramangala, Bangalore, Karnataka- 560095."}
-                  </p>
+                  <h1 className="text-xl sm:text-2xl font-bold">{COMPANY_NAME}</h1>
+                  <p className="text-xs sm:text-sm text-gray-300">{COMPANY_ADDRESS}</p>
                 </div>
               </div>
             </div>
@@ -418,6 +416,12 @@ export default function PayslipPage() {
                         <td className="text-right py-2 px-3 font-medium">{formatCurrency(payslipData.hra)}</td>
                       </tr>
                       <tr className="border-b">
+                        <td className="py-2 px-3 border-r border-amber-100">Special Allowance</td>
+                        <td className="text-right py-2 px-3 font-medium">
+                          {formatCurrency(payslipData.specialAllowance)}
+                        </td>
+                      </tr>
+                      <tr className="border-b">
                         <td className="py-2 px-3 border-r border-amber-100">Bonus Gross</td>
                         <td className="text-right py-2 px-3 font-medium">
                           {formatCurrency(payslipData.statutoryBonus)}
@@ -498,7 +502,14 @@ export default function PayslipPage() {
                         </td>
                       </tr>
                       <tr className="border-b">
-                        <td className="py-2 px-3 border-r border-amber-100">Karma Life</td>
+                        <td className="py-2 px-3 border-r border-amber-100">Arrear Deduction</td>
+                        <td className="text-right py-2 px-3 font-medium">
+                          {formatCurrency(payslipData.arrearDeduction)}
+                        </td>
+                      </tr>
+                      {/* Stored as karmaLife for compatibility with existing records */}
+                      <tr className="border-b">
+                        <td className="py-2 px-3 border-r border-amber-100">Other Deductions</td>
                         <td className="text-right py-2 px-3 font-medium">{formatCurrency(payslipData.karmaLife)}</td>
                       </tr>
                       {/* Always show ESIC */}
